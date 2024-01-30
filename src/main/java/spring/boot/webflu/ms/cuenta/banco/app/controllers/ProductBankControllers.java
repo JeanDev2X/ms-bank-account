@@ -30,6 +30,7 @@ public class ProductBankControllers {
 	@Autowired
 	private ProductBankService productoService;
 	
+	@Autowired
 	private TypeProductBankService tipoProductoService;
 	
 	//LISTA LAS CUENTAS DE BANCO EXISTENTES
@@ -62,11 +63,13 @@ public class ProductBankControllers {
 		return productoService.saveProductoBanco(cuentaBanco);
 	}
 	
-	//REGISTRAR UN PRODUCTO DE CREDITO
-	@PostMapping
-	public Mono<ProductBank> registerProductBank(@RequestBody ProductBank pro) {
+	//REGISTRAR UN PRODUCTO DE BANCO
+	@PostMapping("/guardarProductoBancoValidType")
+	public Mono<ProductBank> registerProductBankValidType(@RequestBody ProductBank pro) {
 		// BUSCA SI EL TIPO DE CREDITO EXISTE
-		Mono<TypeProductBank> tipo = tipoProductoService.findByIdTipoProducto(pro.getTipoProducto().getId());
+		System.out.println("producto" + pro);
+		System.out.println("productoID" + pro.getTipoProducto().getId());
+		Mono<TypeProductBank> tipo = tipoProductoService.findByIdTipoProducto("1");
 		return tipo.defaultIfEmpty(new TypeProductBank()).flatMap(c -> {
 			if (c.getId() == null) {
 				return Mono.error(new InterruptedException("NO EXISTE ESTE TIPO"));
@@ -81,7 +84,7 @@ public class ProductBankControllers {
 	//ELIMINA CLIENTE POR ID
 	@DeleteMapping("/{id}")
 	public Mono<ResponseEntity<Void>> delete(@PathVariable String id) {
-		System.out.println("eliminar clientes");
+		System.out.println("Eliminar la cuenta");
 		return productoService.findByIdProductoBanco(id)
 				.flatMap(s -> {
 			return productoService.deleteProductoBanco(s).then(Mono.just(new ResponseEntity<Void>(HttpStatus.NO_CONTENT)));
@@ -89,5 +92,31 @@ public class ProductBankControllers {
 	}
 	
 	//-----------------------------------------------------------------------------
+	
+	//REGISTRAR UN PRODUCTO DE BANCO
+	@PostMapping
+	public Flux<ProductBank> guardarProductoBanco(@RequestBody ProductBank pro) {
+		log.debug("En el controlador-crear producto");
+		//EL DNI DEBE DE EXISTIR EN EL MS-CREDITO PARA QUE PUEDA VERIFICAR
+		return productoService.saveProductoBancoCliente(pro);
+	}
+	
+	@PutMapping("/retiro/{numero_cuenta}/{monto}/{comision}/{codigo_bancario}")
+	public Mono<ProductBank> retiroBancario(@PathVariable String numero_cuenta,@PathVariable Double monto,
+			@PathVariable Double comision, @PathVariable String codigo_bancario) {
+
+		System.out.println("LLEGO DESDE MS-OP-BANCOS --->>>");
+		return productoService.retiro(monto, numero_cuenta, comision,codigo_bancario);
+	}
+	
+	
+	@PutMapping("/deposito/{numero_Cuenta}/{monto}/{comision}/{codigo_bancario}")
+	public Mono<ProductBank> despositoBancario(@PathVariable Double monto, @PathVariable String numero_Cuenta,
+			@PathVariable Double comision,@PathVariable String codigo_bancario) {
+		
+		System.out.println("LLEGO DESDE MS-OP-BANCOS --->>>");
+		return productoService.depositos(monto, numero_Cuenta, comision,codigo_bancario);
+	}
+	
 	
 }

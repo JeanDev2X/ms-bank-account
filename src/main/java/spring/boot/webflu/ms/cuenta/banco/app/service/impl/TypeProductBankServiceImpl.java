@@ -26,7 +26,8 @@ public class TypeProductBankServiceImpl implements TypeProductBankService{
 	@Override
 	public Mono<TypeProductBank> findByIdTipoProducto(String id)
 	{
-	return tipoProductoDao.findById(id);
+		System.out.println("ID_TIPE-->" + id);
+		return tipoProductoDao.findById(id);
 	
 	}
 	

@@ -10,5 +10,9 @@ public interface ProductBankService {
 	Mono<ProductBank> findByIdProductoBanco(String id); //findByIdProducto	
 	Mono<ProductBank> saveProductoBanco(ProductBank producto); //saveProducto
 	Mono<Void> deleteProductoBanco(ProductBank producto);
-
+	//============
+	Mono<ProductBank> retiro(Double monto, String numTarjeta, Double comision, String codigo_bancario);
+	Mono<ProductBank> depositos(Double monto, String numTarjeta, Double comision, String codigo_bancario);
+	Flux<ProductBank> saveProductoBancoCliente(ProductBank producto);
+	
 }
