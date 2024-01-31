@@ -23,8 +23,7 @@ public class CreditoClient {
 	private WebClient creditoClient;
 
 	public Flux<CuentaCreditoDto> findByNumDoc(String dni) {
-		log.debug("PRODUCTO DE CREDITO - findByNumDoc");
-		log.debug("PRODUCTO DE CREDITO - findByNumDoc" + dni);
+		log.info("BUSCAR SI TIENE UNA DEUDA CREDITO CON DNI : " + dni);				
 		return creditoClient.get()
 				.uri("/dni/{dni}",Collections.singletonMap("dni",dni))
 				.accept(MediaType.APPLICATION_JSON)

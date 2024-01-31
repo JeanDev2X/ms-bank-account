@@ -24,7 +24,7 @@ public class ClientClient {
 	
 	public Mono<Client> findByNumDoc(String dni) {
 		log.debug("findByNumDoc - " + dni);
-		System.out.println("findByNumDoc - " + dni);
+		
 		return clientClient.get()
 				.uri("/dni/{dni}",Collections.singletonMap("dni",dni))
 				.accept(MediaType.APPLICATION_JSON)
