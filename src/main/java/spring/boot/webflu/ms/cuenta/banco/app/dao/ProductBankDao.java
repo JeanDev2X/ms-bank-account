@@ -11,10 +11,10 @@ public interface ProductBankDao extends ReactiveMongoRepository<ProductBank, Str
 	
 	//BUSCA EL NUMERO DE CUENTA - TARGETA CON SU BANCO
 	@Query("{ 'numeroCuenta' : ?0, 'codigoBanco': ?1}")
-	Mono<ProductBank> viewNumCuenta(String numTarjeta,String codigo_bancario);
+	Mono<ProductBank> viewNumCuenta(String numeroCuenta,String codigo_bancario);
 		
 	//busca por numero de documento y tipo de producto si ya esta registrado
-	@Query("{ 'dni' : ?0 , 'tipoProducto.idTipo' : ?1, 'codigoBanco': ?2 }")
+	@Query("{ 'dni' : ?0 , 'tipoProducto.id' : ?1, 'codigoBanco': ?2 }")
 	Flux<ProductBank> buscarPorDocTipoCuentaBanco(String dni, String idTipo, String codigo_bancario);
 		
 

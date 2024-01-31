@@ -63,11 +63,11 @@ public class ProductBankServiceImpl implements ProductBankService {
 	//--------------------------------------------*************************
 	
 	@Override
-	public Mono<ProductBank> retiro(Double monto, String numTarjeta, Double comision, String codigo_bancario) {
+	public Mono<ProductBank> retiro(Double monto, String numero_cuenta, Double comision, String codigo_bancario) {
 		//BUSCA EL NUMERO DE LA CUENTA-TARJETA CON SU BANCO CORRESPONDIENTE
 		//PARA OBTERNER TODOS LOS DATOS PARA QUITAR EL MONTO
 		log.debug("Llego desde el controlador");
-		return productoDao.viewNumCuenta(numTarjeta,codigo_bancario).flatMap(c -> {
+		return productoDao.viewNumCuenta(numero_cuenta,codigo_bancario).flatMap(c -> {
 
 			System.out.println(c.toString());
 			
@@ -81,9 +81,9 @@ public class ProductBankServiceImpl implements ProductBankService {
 	}
 
 	@Override
-	public Mono<ProductBank> depositos(Double monto, String numTarjeta, Double comision, String codigo_bancario) {
+	public Mono<ProductBank> depositos(Double monto, String numero_Cuenta, Double comision, String codigo_bancario) {
 		
-		return productoDao.viewNumCuenta(numTarjeta,codigo_bancario).flatMap(c -> {
+		return productoDao.viewNumCuenta(numero_Cuenta,codigo_bancario).flatMap(c -> {
 			
 			System.out.println("El monto es : " +  monto);
 			System.out.println("El monto es : " +  comision);
@@ -97,9 +97,8 @@ public class ProductBankServiceImpl implements ProductBankService {
 	@Override
 	public Flux<ProductBank> saveProductoBancoCliente(ProductBank producto) {
 		
-		log.debug("Entro al metodo crear producto");
-		System.out.println("Entro al metodo crear producto");
-		System.out.println(producto.toString());
+		log.info("CREAR PRODUCTO BANCARIO");		
+		log.info("Producto["+producto+"]");
 		
 		List<ProductBank> listProducto = new ArrayList<ProductBank>();
 		listProducto.add(producto);
@@ -131,25 +130,21 @@ public class ProductBankServiceImpl implements ProductBankService {
 			}
 			return false;
 		}).flatMap(f -> {
-
-			log.debug("DNI : " + f.getDni());
-			System.out.println(f.getDni());
-			
 			//BUSCA SI TINE UNA DEUDA DE UN PRODUCTO DE CREDITO	
-			log.debug("BUSCA SI TINE UNA DEUDA DE UN PRODUCTO DE CREDITO");
+			log.info("BUSCA SI TINE UNA DEUDA DE UN PRODUCTO DE CREDITO");
 			Flux<CuentaCreditoDto> cred = creditoClient.findByNumDoc(f.getDni());
 			
-			cred.subscribe(c -> System.out.println(c));
+			cred.subscribe(c -> log.info("CuentaCreditoDto["+ c +"]"));
 			
 			return cred.defaultIfEmpty(new CuentaCreditoDto()).flatMap(n->{
 				
 				//SI NO TIENE UNA CUENTA SIGNIFICA QUE NO TIENE DEUDA
-				log.debug("El numero de cuenta es : " + n.getNumeroCuenta());
-				System.out.println("El numero de cuenta es : " + n.getNumeroCuenta());
+				log.info("NUMERO CUENTA : " + n.getNumeroCuenta());				
 				
 				return cred.flatMap(deuda -> {
 					
 					if(deuda.getCodigoBanco() == null) {
+						log.info("NO TIENE DEUDA");
 						deuda.setCodigoBanco(f.getCodigoBanco());
 						deuda.setConsumo(0.0);
 					}
@@ -159,22 +154,16 @@ public class ProductBankServiceImpl implements ProductBankService {
 					}
 					
 					//BUSCAR EL NUMERO DE DOCUMENTO
-					log.debug("El DNI es : --->" + f.getDni());
-					System.out.println("El DNI es : --->" + f.getDni());
-					System.out.println("ProductBank--[" + f);
+					log.info("ProductBank[" + f+"]");					
 					//OBTENIENDO LOS DATOS DEL CLIENTE
 					Mono<Client> cli = clientClient.findByNumDoc(f.getDni());
-					cli.subscribe(c -> System.out.println(c));
-					
-					log.info("datos cliente --->> "+cli.map(c-> "DNI : " + c.getNumdoc()));
-					System.out.println("datos cliente --->> "+cli.map(c-> "DNI : " + c.getNumdoc()));
-					System.out.println("datos cliente --->> "+cli.map(c-> c.getTipoCliente().toString()));
+					cli.subscribe(c -> log.info("CuentaCreditoDto["+ c +"]"));
+										
 					return cli.flatMap(p -> {
-						System.out.println("client--[" + f);
+						log.info("client[" + f+"]");
 						//COMPARA EL CODIGO DE BANCO DEL CLIENTE CON
 						//EL CODIGO DE QUE ESTA MANDANDO DEL BANCO
-						if(!p.getCodigoBanco().equalsIgnoreCase(f.getCodigoBanco())) {
-							System.out.println("LA CUENTA-PRODUCTO DEL CLIENTE NO PERTENECE AL BANCO");
+						if(!p.getCodigoBanco().equalsIgnoreCase(f.getCodigoBanco())) {							
 							log.info("LA CUENTA-PRODUCTO DEL CLIENTE NO PERTENECE AL BANCO");
 							throw new RequestException("LA CUENTA-PRODUCTO DEL CLIENTE NO PERTENECE AL BANCO");
 						
@@ -182,31 +171,28 @@ public class ProductBankServiceImpl implements ProductBankService {
 							/*							  
 							tipo cliente
 							personal = 1
-							empresarial= 2							
-							empresarial corporativo = 5 							
+							empresarial= 2																					
 							*/							
 							//VERIFIANDO EL TIPO DE CLIENTE
-							System.out.println("VERIFIANDO EL TIPO DE CLIENTE");
-							if (p.getTipoCliente().getId().equalsIgnoreCase("1")) { //personal = 1
+							log.info("LA CUENTA-PRODUCTO DEL CLIENTE --> PERTENECE AL BANCO");
+							log.info("VERIFIANDO EL TIPO DE CLIENTE");
+							if (p.getTipoCliente().getId().equalsIgnoreCase("1")) { //cliente personal = 1
 								//BUSCA SI EL CLIENTE PERSONAL TIENE UN PRODUCTO YA CREADO
-								System.out.println("BUSCA SI EL CLIENTE PERSONAL TIENE UN PRODUCTO YA CREADO");
+								log.info("BUSCA SI EL CLIENTE PERSONAL TIENE UN PRODUCTO YA CREADO");
 								Mono<Long> valor = productoDao
 										.buscarPorDocTipoCuentaBanco(f.getDni(), f.getTipoProducto().getId(),f.getCodigoBanco()).count();
-																
-								log.info("clientes ---> " + valor);
-								System.out.println("clientes ---> " + valor);
+																					
+								valor.subscribe(v -> log.info("PRODUCTO :["+ v +"]"));
 								
 								return valor.flatMap(p1 -> {									
 									if (p1 >= 1) {
-										log.info("TIENE ALMNOS UNA CUENTA CREADA");
-										System.out.println("TIENE ALMNOS UNA CUENTA CREADA");
-										if (!f.getTipoProducto().getId().equalsIgnoreCase("1")&& 
-												!f.getTipoProducto().getId().equalsIgnoreCase("2")&& 
-												!f.getTipoProducto().getId().equalsIgnoreCase("3")) {
-											System.out.println("CLIENTE PERSONAL SOLO PUEDE TENER UN PRODUCTO");
-											System.out.println("VERIFICA QUE NO TENGA CREADO UNA DE CUENTA : AHORRO, CORRIENTE, PLAZO FIJO");
-											log.info("CLIENTE PERSONAL SOLO PUEDE TENER UN PRODUCTO");
-											log.info("VERIFICA QUE NO TENGA CREADO UNA DE CUENTA : AHORRO, CORRIENTE, PLAZO FIJO");
+										log.info("TIENE AL MENOS UNA CUENTA CREADA");
+										log.info("CLIENTE PERSONAL SOLO PUEDE TENER UN PRODUCTO");
+										log.info("VERIFICA QUE NO TENGA CREADO UNA DE CUENTA : AHORRO, CORRIENTE, PLAZO FIJO");
+										if (!f.getTipoProducto().getId().equalsIgnoreCase("1")&& //ahorro
+												!f.getTipoProducto().getId().equalsIgnoreCase("2")&& //corriente
+												!f.getTipoProducto().getId().equalsIgnoreCase("3")) {	//plazoFijo										
+											log.info("CREAR OTRO TIPO DE CUENTA A AHORRO, CORRIENTE, PLAZO FIJO");
 											
 											ProductBank f1 = new ProductBank();
 											
@@ -225,10 +211,11 @@ public class ProductBankServiceImpl implements ProductBankService {
 											f1.setTipoProducto(t);
 											return productoDao.save(f1);
 										}else {
-											throw new RequestException("PERSONAL TIENE UNA CUENTA BANCARIA DE ESTE TIPO");
+											log.info("PERSONAL TIENE UNA CUENTA BANCARIA DE ESTE TIPO - NO PUEDE TENER MAS DE UNA CUENTA");	
+											throw new RequestException("EL CLIENTE PERSONAL - YA TIENE UNA CUENTA(AHORRO, CORRIENTE, PLAZO FIJO) CREADA - NO PUEDE SER CREADA OTRA");
 										}
 									}else {
-										System.out.println("CUENTA CREADA");
+										log.info("CUENTA NUEVA CREADA");										
 										ProductBank f1 = new ProductBank();
 										
 										f1.setDni(f.getDni());
@@ -248,6 +235,73 @@ public class ProductBankServiceImpl implements ProductBankService {
 									}
 									//return null;
 								});
+								
+							}else if (p.getTipoCliente().getId().equalsIgnoreCase("2")) { //empresarial= 2
+								//CLIENTE EMPRESARIA SOLO PUEDE TENER CUENTAS DE TIPO CORRIENTE
+								log.info("CLIENTE EMPRESARIA SOLO PUEDE TENER CUENTAS DE TIPO CORRIENTE");
+								if (!f.getTipoProducto().getId().equalsIgnoreCase("3")) {
+									throw new RequestException("CLIENTE EMPRESARIAL : NO PUEDE TENER CUENTA DE ESTE TIPO");
+								}
+								log.debug("CREA LA CUENTA EMPRESARIAL");
+								ProductBank f1 = new ProductBank();
+
+								f1.setDni(f.getDni());
+								f1.setNumeroCuenta(f.getNumeroCuenta());
+								f1.setFecha_afiliacion(f.getFecha_afiliacion());
+								f1.setFecha_caducidad(f.getFecha_caducidad());
+								f1.setSaldo(f.getSaldo());								
+								f1.setCodigoBanco(f.getCodigoBanco());
+
+								TypeProductBank t = new TypeProductBank();
+								t.setId(f.getTipoProducto().getId());
+								t.setDescripcion(f.getTipoProducto().getDescripcion());
+								f1.setTipoProducto(t);
+
+								return productoDao.save(f1);
+								
+							}else if (p.getTipoCliente().getId().equalsIgnoreCase("3")) { //personal vip = 3
+								if(!(f.getSaldo() >= 500)) { 							
+									throw new RequestException("DEBE TENER SALDO MINIMO S/.500.00");
+								}else {
+									
+								//TODO : Adicionalmente, para solicitar este producto el cliente debe tener una tarjeta de crédito con el banco al momento de la creación de la cuenta.
+									
+									log.info("CREA LA CUENTA PERSONAL VIP");						
+									ProductBank f1 = new ProductBank();
+									f1.setDni(f.getDni());
+									f1.setNumeroCuenta(f.getNumeroCuenta());
+									f1.setFecha_afiliacion(f.getFecha_afiliacion());
+									f1.setFecha_caducidad(f.getFecha_caducidad());
+									f1.setSaldo(f.getSaldo());
+									f1.setCodigoBanco(f.getCodigoBanco());
+
+									TypeProductBank t = new TypeProductBank();
+									t.setId(f.getTipoProducto().getId());
+									t.setDescripcion(f.getTipoProducto().getDescripcion());
+									f1.setTipoProducto(t);
+									return productoDao.save(f1);
+
+								}
+							}else if (p.getTipoCliente().getId().equalsIgnoreCase("4")) { //empresarial pyme = 4
+								
+								//TODO : Como requisito debe de tener una cuenta corriente. 
+								//TODO : Como requisito, el cliente debe tener una tarjeta de crédito con el banco al momento de la creación de la cuenta.
+								
+								ProductBank f1 = new ProductBank();
+
+								f1.setDni(f.getDni());
+								f1.setNumeroCuenta(f.getNumeroCuenta());
+								f1.setFecha_afiliacion(f.getFecha_afiliacion());
+								f1.setFecha_caducidad(f.getFecha_caducidad());
+								f1.setSaldo(f.getSaldo());								
+								f1.setCodigoBanco(f.getCodigoBanco());
+
+								TypeProductBank t = new TypeProductBank();
+								t.setId(f.getTipoProducto().getId());
+								t.setDescripcion(f.getTipoProducto().getDescripcion());
+								f1.setTipoProducto(t);
+								return productoDao.save(f1);
+								
 								
 							}
 						}

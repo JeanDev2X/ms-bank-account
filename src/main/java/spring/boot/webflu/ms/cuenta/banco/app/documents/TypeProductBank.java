@@ -4,9 +4,12 @@ import javax.validation.constraints.NotEmpty;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
+@ToString
 @Getter
 @Setter
 @Document(collection ="TypeProductBank")
