@@ -16,6 +16,7 @@ public interface ProductBankDao extends ReactiveMongoRepository<ProductBank, Str
 	//busca por numero de documento y tipo de producto si ya esta registrado
 	@Query("{ 'dni' : ?0 , 'tipoProducto.id' : ?1, 'codigoBanco': ?2 }")
 	Flux<ProductBank> buscarPorDocTipoCuentaBanco(String dni, String idTipo, String codigo_bancario);
+	
+	Flux<ProductBank> findByDni(String dni);
 		
-
 }

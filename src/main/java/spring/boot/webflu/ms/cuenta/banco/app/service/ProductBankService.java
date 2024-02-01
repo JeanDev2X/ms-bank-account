@@ -14,5 +14,7 @@ public interface ProductBankService {
 	Mono<ProductBank> retiro(Double monto, String numero_cuenta, Double comision, String codigo_bancario);
 	Mono<ProductBank> depositos(Double monto, String numero_Cuenta, Double comision, String codigo_bancario);
 	Flux<ProductBank> saveProductoBancoCliente(ProductBank producto);
+	Mono<ProductBank> listProdNumTarj(String num, String codigo_bancario);
+	Flux<ProductBank> findAllProductoByDniCliente(String dniCliente);
 	
 }

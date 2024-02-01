@@ -322,5 +322,18 @@ public class ProductBankServiceImpl implements ProductBankService {
 		
 //		return null;
 	}
+
+	@Override
+	public Mono<ProductBank> listProdNumTarj(String num, String codigo_bancario) {
+		System.out.println("lista productos por numero de cuenta");
+		return productoDao.viewNumCuenta(num, codigo_bancario);
+	}
+
+	@Override
+	public Flux<ProductBank> findAllProductoByDniCliente(String dniCliente) {
+		return productoDao.findByDni(dniCliente);
+	}
+	
+	
 	
 }
