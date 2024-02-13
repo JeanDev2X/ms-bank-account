@@ -16,9 +16,8 @@ public class Client {
 	private String edad;
 	private String correo;
 	private TipoBancoCliente tipoCliente;
+	private boolean isCredito;
 	private String codigoBanco;
-	
-	
 	
 }
 
