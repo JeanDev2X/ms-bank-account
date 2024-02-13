@@ -41,18 +41,25 @@ public class SpringBootWebfluMsCuentaBancoApplication implements CommandLineRunn
 		TypeProductBank ahorro = new TypeProductBank("1","ahorro");
 		TypeProductBank corriente = new TypeProductBank("2","corriente");
 		TypeProductBank plazoFijo = new TypeProductBank("3","plazoFijo");
+		TypeProductBank ahorroVip = new TypeProductBank("4","ahorroVip");
+		TypeProductBank ahorroPyme = new TypeProductBank("5","ahorroPyme");
 		
 		//
-		Flux.just(ahorro,corriente,plazoFijo)
+		Flux.just(ahorro,corriente,plazoFijo,ahorroVip,ahorroPyme)
 		.flatMap(serviceTipoProducto::saveTipoProducto)
 		.doOnNext(c -> {
-			log.info("Tipo cliente creado: " +  c.getDescripcion() + ", Id: " + c.getId());
+			log.info("Tipo producto creado: " +  c.getDescripcion() + ", Id: " + c.getId());
 		}).thenMany(					
 				Flux.just(
 						
-						new ProductBank("47305710","900001",ahorro,10000.0,"bcp"),
-						new ProductBank("47305711","900003",corriente,30000.0,"bcp"),
-						new ProductBank("07091424","900005",plazoFijo,50000.0,"bcp")
+						new ProductBank("47305710","900001","4557880460332750",ahorro,10000.0,"bcp"),
+						new ProductBank("47305711","900003","4557880460330001",corriente,30000.0,"bcp"),
+						new ProductBank("47305711","900044","4557880460330044",corriente,80000.0,"bcp"),
+						new ProductBank("47305712","900005","4557880460338888",plazoFijo,50000.0,"bcp"),
+						new ProductBank("47305712","900055","4557880460338855",plazoFijo,9000.0,"bcp"),
+						new ProductBank("47305713","900006","4557880460334500",ahorroVip,50000.0,"bcp"),
+						new ProductBank("99091450","900099","4557880460339001",ahorroPyme,45000.0,"bcp"),
+						new ProductBank("99091440","900007","4557880460339000",ahorroPyme,50000.0,"bcp")
 						)					
 					.flatMap(producto -> {
 						return serviceProducto.saveProductoBanco(producto);

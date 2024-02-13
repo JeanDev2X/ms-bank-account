@@ -32,9 +32,10 @@ public class TypeProductBankServiceImpl implements TypeProductBankService{
 	}
 	
 	@Override
-	public Mono<TypeProductBank> saveTipoProducto(TypeProductBank tipoCliente)
+	public Mono<TypeProductBank> saveTipoProducto(TypeProductBank typeProductBank)
 	{
-	return tipoProductoDao.save(tipoCliente);
+		System.out.println("tipos producto [" + typeProductBank);
+		return tipoProductoDao.save(typeProductBank);
 	}
 	
 	@Override

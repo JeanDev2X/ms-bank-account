@@ -3,6 +3,7 @@ package spring.boot.webflu.ms.cuenta.banco.app.service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import spring.boot.webflu.ms.cuenta.banco.app.documents.ProductBank;
+import spring.boot.webflu.ms.cuenta.banco.app.dto.CuentaSaldoPromedio;
 
 public interface ProductBankService {
 
@@ -15,6 +16,7 @@ public interface ProductBankService {
 	Mono<ProductBank> depositos(Double monto, String numero_Cuenta, Double comision, String codigo_bancario);
 	Flux<ProductBank> saveProductoBancoCliente(ProductBank producto);
 	Mono<ProductBank> listProdNumTarj(String num, String codigo_bancario);
+	Mono<CuentaSaldoPromedio> saldos(String dniCliente);
 	Flux<ProductBank> findAllProductoByDniCliente(String dniCliente);
 	
 }

@@ -69,7 +69,7 @@ public class ProductBankControllers {
 	public Mono<ProductBank> registerProductBankValidType(@RequestBody ProductBank pro) {
 		// BUSCA SI EL TIPO DE CREDITO EXISTE
 		System.out.println("producto" + pro);
-		System.out.println("productoID" + pro.getTipoProducto().getId());
+		
 		Mono<TypeProductBank> tipo = tipoProductoService.findByIdTipoProducto("1");
 		return tipo.defaultIfEmpty(new TypeProductBank()).flatMap(c -> {
 			if (c.getId() == null) {
@@ -95,13 +95,16 @@ public class ProductBankControllers {
 	//-----------------------------------------------------------------------------
 	
 	//REGISTRAR UN PRODUCTO DE BANCO
+	
 	@PostMapping
 	public Flux<ProductBank> guardarProductoBanco(@RequestBody ProductBank pro) {
 		log.debug("En el controlador-crear producto");
 		//EL DNI DEBE DE EXISTIR EN EL MS-CREDITO PARA QUE PUEDA VERIFICAR
 		return productoService.saveProductoBancoCliente(pro);
 	}
-	
+	/*
+	Un cliente puede hacer depósitos y retiros de sus cuentas bancarias
+	*/
 	@PutMapping("/retiro/{numero_cuenta}/{monto}/{comision}/{codigo_bancario}")
 	public Mono<ProductBank> retiroBancario(@PathVariable String numero_cuenta,@PathVariable Double monto,
 			@PathVariable Double comision, @PathVariable String codigo_bancario) {
@@ -110,7 +113,9 @@ public class ProductBankControllers {
 		return productoService.retiro(monto, numero_cuenta, comision,codigo_bancario);
 	}
 	
-	
+	/*
+	Un cliente puede hacer depósitos y retiros de sus cuentas bancarias
+	*/
 	@PutMapping("/deposito/{numero_Cuenta}/{monto}/{comision}/{codigo_bancario}")
 	public Mono<ProductBank> despositoBancario(@PathVariable Double monto, @PathVariable String numero_Cuenta,
 			@PathVariable Double comision,@PathVariable String codigo_bancario) {
@@ -119,6 +124,7 @@ public class ProductBankControllers {
 		return productoService.depositos(monto, numero_Cuenta, comision,codigo_bancario);
 	}
 	//MUESTRA LA CUENTA BANCARIA POR EL NUMERO DE CUENTA Y EL CODIGO DE BANCO
+	
 	@GetMapping("/numero_cuenta/{num}/{codigo_bancario}")
 	public Mono<ProductBank> productosBancoPorBancos(@PathVariable String num, @PathVariable String codigo_bancario) {
 		Mono<ProductBank> producto = productoService.listProdNumTarj(num, codigo_bancario);
@@ -133,6 +139,9 @@ public class ProductBankControllers {
 	}
 	
 	//MUESTRA LOS SALDOS DE LA CUENTAS DE BANCO - CON EL NUMERO DE CUENTA Y EL CODIGO DE BANCO
+	/*
+	El sistema debe permitir consultar los saldos disponibles en sus productos como: cuentas bancarias y tarjetas de crédito 
+	*/
 	@GetMapping("/SaldosBancarios/{numero_cuenta}/{codigo_bancario}")
 	public Mono<CuentaBancoDto> saldosClienteBancos(@PathVariable String numero_cuenta,@PathVariable String codigo_bancario) {
 		
@@ -141,7 +150,7 @@ public class ProductBankControllers {
 		//BUSCAR LA TARGETA-CUENTA
 		Mono<ProductBank> oper = productoService.listProdNumTarj(numero_cuenta, codigo_bancario);
 		
-		oper.map(o->o).subscribe(u -> log.info(u.toString()));
+//		oper.map(o->o).subscribe(u -> log.info(u.toString()));
 		
 		return oper.flatMap(c -> {
 			
@@ -164,5 +173,24 @@ public class ProductBankControllers {
 		});
 
 	}
+	
+	double saldoPromedio = 0.0;
+	double sumaPromedio = 0.0;
+	int cantidad = 0;
+	
+	@GetMapping("/saldopromedio/{dni}")
+	public Mono<CuentaSaldoPromedio> saldosPromedio(@PathVariable String dni) {
+		
+		Mono<CuentaSaldoPromedio> saldos = productoService.saldos(dni);
+		
+		return saldos;
+		
+	}
+	
+//	@GetMapping("/dni2/{dni}")
+//	public Flux<ProductBank> mostrarProductoBancoCliente2(@PathVariable String dni) {
+//		Flux<ProductBank> producto = productoService.findAllProductoByDniCliente(dni);
+//		return producto;
+//	}
 	
 }
