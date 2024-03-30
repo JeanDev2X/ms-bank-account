@@ -128,6 +128,7 @@ public class ProductBankControllers {
 	@GetMapping("/numero_cuenta/{num}/{codigo_bancario}")
 	public Mono<ProductBank> productosBancoPorBancos(@PathVariable String num, @PathVariable String codigo_bancario) {
 		Mono<ProductBank> producto = productoService.listProdNumTarj(num, codigo_bancario);
+		producto.subscribe(o -> System.out.println("Cliente[" + o.toString()));
 		return producto;
 	}
 	
@@ -145,38 +146,28 @@ public class ProductBankControllers {
 	@GetMapping("/SaldosBancarios/{numero_cuenta}/{codigo_bancario}")
 	public Mono<CuentaBancoDto> saldosClienteBancos(@PathVariable String numero_cuenta,@PathVariable String codigo_bancario) {
 		
-		System.out.println("Saldos Bancarios : --->> " + numero_cuenta + " cod banco -->> " + codigo_bancario);
+		System.out.println("Saldos Bancarios: " + numero_cuenta + " cod banco: " + codigo_bancario);
 		
-		//BUSCAR LA TARGETA-CUENTA
-		Mono<ProductBank> oper = productoService.listProdNumTarj(numero_cuenta, codigo_bancario);
-		
-//		oper.map(o->o).subscribe(u -> log.info(u.toString()));
-		
-		return oper.flatMap(c -> {
-			
-			//TODO:Agregar cuando la cuenta no existe.
-			
-			CuentaBancoDto pp = new CuentaBancoDto();
-			TipoCuentaBancoDto tp = new TipoCuentaBancoDto();
-
-			
-			tp.setId(c.getTipoProducto().getId());
-			tp.setDescripcion(c.getTipoProducto().getDescripcion());
-			
-			
-			pp.setDni(c.getDni());
-			pp.setNumero_cuenta(c.getNumeroCuenta());
-			pp.setSaldo(c.getSaldo());
-			pp.setTipoProducto(tp);
-
-			return Mono.just(pp);
-		});
+		return productoService.listProdNumTarj(numero_cuenta, codigo_bancario)
+	            .flatMap(this::mapToCuentaBancoDto)
+	            .switchIfEmpty(Mono.error(new RuntimeException("La cuenta no existe"))); // Manejar cuenta inexistente si es necesario
 
 	}
 	
-	double saldoPromedio = 0.0;
-	double sumaPromedio = 0.0;
-	int cantidad = 0;
+	private Mono<CuentaBancoDto> mapToCuentaBancoDto(ProductBank c) {
+	    CuentaBancoDto pp = new CuentaBancoDto();
+	    TipoCuentaBancoDto tp = new TipoCuentaBancoDto();
+
+	    tp.setId(c.getTipoProducto().getId());
+	    tp.setDescripcion(c.getTipoProducto().getDescripcion());
+
+	    pp.setDni(c.getDni());
+	    pp.setNumero_cuenta(c.getNumeroCuenta());
+	    pp.setSaldo(c.getSaldo());
+	    pp.setTipoProducto(tp);
+
+	    return Mono.just(pp);
+	}
 	
 	@GetMapping("/saldopromedio/{dni}")
 	public Mono<CuentaSaldoPromedio> saldosPromedio(@PathVariable String dni) {
@@ -187,10 +178,33 @@ public class ProductBankControllers {
 		
 	}
 	
-//	@GetMapping("/dni2/{dni}")
-//	public Flux<ProductBank> mostrarProductoBancoCliente2(@PathVariable String dni) {
-//		Flux<ProductBank> producto = productoService.findAllProductoByDniCliente(dni);
-//		return producto;
-//	}
+	//=============operaciones yanki
+	
+	@GetMapping("/numeroCelular/{numeroCelular}")
+	public Mono<ProductBank> viewCuentaYanki(@PathVariable String numeroCelular) {
+		Mono<ProductBank> producto = productoService.viewCuentaYanki(numeroCelular);
+		producto.subscribe(o -> System.out.println("Cliente[" + o.toString()));
+		return producto;
+	}
+	
+	@GetMapping("/saldoyanki/{numeroCelular}")
+	public Mono<ProductBank> saldoYanki(@PathVariable String numeroCelular) {
+		System.out.println("HOLA SALDO");
+		Mono<ProductBank> producto = productoService.saldoYanki(numeroCelular);
+		producto.subscribe(o -> System.out.println("Cliente[" + o.toString()));
+		return producto;
+	}
+	
+	@PutMapping("/retiroyk/{numeroCelular}/{monto}")
+	public Mono<ProductBank> retiroCuentaYanki(@PathVariable String numeroCelular,@PathVariable Double monto) {
+		System.out.println("LLEGO DESDE MS-OP-BANCOS --->>>");
+		return productoService.retiroYanki(monto, numeroCelular);
+	}
+	
+	@PutMapping("/depositoyk/{numeroCelular}/{monto}")
+	public Mono<ProductBank> despositoCuentaYanki(@PathVariable Double monto, @PathVariable String numeroCelular) {		
+		System.out.println("LLEGO DESDE MS-OP-BANCOS --->>>");
+		return productoService.depositoYanki(monto, numeroCelular);
+	}
 	
 }

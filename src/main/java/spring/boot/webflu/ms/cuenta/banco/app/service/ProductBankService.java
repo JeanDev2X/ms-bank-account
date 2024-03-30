@@ -18,5 +18,10 @@ public interface ProductBankService {
 	Mono<ProductBank> listProdNumTarj(String num, String codigo_bancario);
 	Mono<CuentaSaldoPromedio> saldos(String dniCliente);
 	Flux<ProductBank> findAllProductoByDniCliente(String dniCliente);
+	//==============yanki
+	Mono<ProductBank> viewCuentaYanki(String num);
+	Mono<ProductBank> saldoYanki(String num);
+	Mono<ProductBank> retiroYanki(Double monto, String numeroCelular);
+	Mono<ProductBank> depositoYanki(Double monto, String numeroCelular);
 	
 }

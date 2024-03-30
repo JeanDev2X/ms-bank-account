@@ -30,6 +30,9 @@ public class ProductBank {
 	private String numeroCuenta; //DEBE DE SER UNICO - numero_cuenta
 	
 	@NotEmpty
+	private String numeroCelular;
+	
+	@NotEmpty
 	private String numeroTarjeta;//DEBE DE SER UNICO
 	
 	@NotEmpty	
@@ -53,10 +56,11 @@ public class ProductBank {
 
 	}
 
-	public ProductBank(String dni,String numeroCuenta,String numeroTarjeta,
+	public ProductBank(String dni,String numeroCuenta,String numeroCelular,String numeroTarjeta,
 			TypeProductBank tipoProducto,double saldo,String codigoBanco) {
 		this.dni = dni;
 		this.numeroCuenta = numeroCuenta;
+		this.numeroCelular = numeroCelular;
 		this.numeroTarjeta = numeroTarjeta;
 		this.tipoProducto = tipoProducto;
 		this.saldo = saldo;
