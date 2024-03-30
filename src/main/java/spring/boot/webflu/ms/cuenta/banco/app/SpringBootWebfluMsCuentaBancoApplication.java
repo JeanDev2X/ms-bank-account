@@ -52,14 +52,14 @@ public class SpringBootWebfluMsCuentaBancoApplication implements CommandLineRunn
 		}).thenMany(					
 				Flux.just(
 						
-						new ProductBank("47305710","900001","4557880460332750",ahorro,10000.0,"bcp"),
-						new ProductBank("47305711","900003","4557880460330001",corriente,30000.0,"bcp"),
-						new ProductBank("47305711","900044","4557880460330044",corriente,80000.0,"bcp"),
-						new ProductBank("47305712","900005","4557880460338888",plazoFijo,50000.0,"bcp"),
-						new ProductBank("47305712","900055","4557880460338855",plazoFijo,9000.0,"bcp"),
-						new ProductBank("47305713","900006","4557880460334500",ahorroVip,50000.0,"bcp"),
-						new ProductBank("99091450","900099","4557880460339001",ahorroPyme,45000.0,"bcp"),
-						new ProductBank("99091440","900007","4557880460339000",ahorroPyme,50000.0,"bcp")
+						new ProductBank("47305710","900001","963791402","4557880460332750",ahorro,10000.0,"bcp"),
+						new ProductBank("47305711","900003","","4557880460330001",corriente,30000.0,"bcp"),
+						new ProductBank("47305711","900044","","4557880460330044",corriente,80000.0,"bcp"),
+						new ProductBank("47305712","900005","963791420","4557880460338888",plazoFijo,50000.0,"bcp"),
+						new ProductBank("47305712","900055","","4557880460338855",plazoFijo,9000.0,"bcp"),
+						new ProductBank("47305713","900006","963791445","4557880460334500",ahorroVip,50000.0,"bcp"),
+						new ProductBank("99091450","900099","","4557880460339001",ahorroPyme,45000.0,"bcp"),
+						new ProductBank("99091440","900007","","4557880460339000",ahorroPyme,50000.0,"bcp")
 						)					
 					.flatMap(producto -> {
 						return serviceProducto.saveProductoBanco(producto);
