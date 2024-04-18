@@ -11,5 +11,13 @@ public class UtilisCode {
         String numero = String.valueOf(numeroAleatorio);        
         return numero;
 	}
+	
+	public static String numCuenta() {
+		Random rand = new Random();
+        // Generar un número aleatorio de 4 dígitos
+        int numeroAleatorio = rand.nextInt(9000) + 1000;
+        String numero = String.valueOf(numeroAleatorio);        
+        return numero;
+	}
 
 }
