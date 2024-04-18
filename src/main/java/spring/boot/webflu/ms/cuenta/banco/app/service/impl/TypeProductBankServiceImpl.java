@@ -1,5 +1,7 @@
 package spring.boot.webflu.ms.cuenta.banco.app.service.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,8 @@ public class TypeProductBankServiceImpl implements TypeProductBankService{
 	@Autowired
 	public TypeProductBankDao  tipoProductoDao;
 	
+	private static final Logger log = LoggerFactory.getLogger(TypeProductBankServiceImpl.class);
+	
 	@Override
 	public Flux<TypeProductBank> findAllTipoproducto()
 	{
@@ -25,10 +29,9 @@ public class TypeProductBankServiceImpl implements TypeProductBankService{
 	}
 	@Override
 	public Mono<TypeProductBank> findByIdTipoProducto(String id)
-	{
-		System.out.println("ID_TIPE-->" + id);
+	{		
+		log.info("id["+id+"]");
 		return tipoProductoDao.findById(id);
-	
 	}
 	
 	@Override

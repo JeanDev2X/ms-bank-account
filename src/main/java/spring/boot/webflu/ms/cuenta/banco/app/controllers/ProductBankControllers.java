@@ -67,19 +67,15 @@ public class ProductBankControllers {
 	//REGISTRAR UN PRODUCTO DE BANCO
 	@PostMapping("/guardarProductoBancoValidType")
 	public Mono<ProductBank> registerProductBankValidType(@RequestBody ProductBank pro) {
-		// BUSCA SI EL TIPO DE CREDITO EXISTE
-		System.out.println("producto" + pro);
+		// BUSCA SI EL TIPO DE CREDITO EXISTE		
+		log.info("producto" + pro);
+		return tipoProductoService.findByIdTipoProducto("1")
+	            .switchIfEmpty(Mono.error(new InterruptedException("NO EXISTE ESTE TIPO DE PRODUCTO")))
+	            .flatMap(tipo -> {
+	                pro.setTipoProducto(tipo);
+	                return productoService.saveProductoBanco(pro);
+	            });
 		
-		Mono<TypeProductBank> tipo = tipoProductoService.findByIdTipoProducto("1");
-		return tipo.defaultIfEmpty(new TypeProductBank()).flatMap(c -> {
-			if (c.getId() == null) {
-				return Mono.error(new InterruptedException("NO EXISTE ESTE TIPO"));
-			}
-			return Mono.just(c);
-		}).flatMap(t -> {
-			pro.setTipoProducto(t);
-			return productoService.saveProductoBanco(pro);
-		});
 	}
 	
 	//ELIMINA CLIENTE POR ID
@@ -155,55 +151,55 @@ public class ProductBankControllers {
 	}
 	
 	private Mono<CuentaBancoDto> mapToCuentaBancoDto(ProductBank c) {
-	    CuentaBancoDto pp = new CuentaBancoDto();
-	    TipoCuentaBancoDto tp = new TipoCuentaBancoDto();
+	    /*
+	    Esto permite que la creación del objeto se retrase hasta que se suscriba un observador
+	    */	    
+	    return Mono.fromSupplier(() -> {
+	        CuentaBancoDto pp = new CuentaBancoDto();
+	        TipoCuentaBancoDto tp = new TipoCuentaBancoDto();
 
-	    tp.setId(c.getTipoProducto().getId());
-	    tp.setDescripcion(c.getTipoProducto().getDescripcion());
+	        tp.setId(c.getTipoProducto().getId());
+	        tp.setDescripcion(c.getTipoProducto().getDescripcion());
 
-	    pp.setDni(c.getDni());
-	    pp.setNumero_cuenta(c.getNumeroCuenta());
-	    pp.setSaldo(c.getSaldo());
-	    pp.setTipoProducto(tp);
+	        pp.setDni(c.getDni());
+	        pp.setNumero_cuenta(c.getNumeroCuenta());
+	        pp.setSaldo(c.getSaldo());
+	        pp.setTipoProducto(tp);
 
-	    return Mono.just(pp);
+	        return pp;
+	    });
+	    
 	}
 	
 	@GetMapping("/saldopromedio/{dni}")
-	public Mono<CuentaSaldoPromedio> saldosPromedio(@PathVariable String dni) {
-		
+	public Mono<CuentaSaldoPromedio> saldosPromedio(@PathVariable String dni) {		
 		Mono<CuentaSaldoPromedio> saldos = productoService.saldos(dni);
-		
-		return saldos;
-		
+		return saldos;		
 	}
 	
 	//=============operaciones yanki
 	
 	@GetMapping("/numeroCelular/{numeroCelular}")
 	public Mono<ProductBank> viewCuentaYanki(@PathVariable String numeroCelular) {
-		Mono<ProductBank> producto = productoService.viewCuentaYanki(numeroCelular);
-		producto.subscribe(o -> System.out.println("Cliente[" + o.toString()));
-		return producto;
+		return productoService.viewCuentaYanki(numeroCelular)
+	            .doOnNext(o -> log.info("Cliente[" + o.toString()));
 	}
 	
 	@GetMapping("/saldoyanki/{numeroCelular}")
 	public Mono<ProductBank> saldoYanki(@PathVariable String numeroCelular) {
-		System.out.println("HOLA SALDO");
-		Mono<ProductBank> producto = productoService.saldoYanki(numeroCelular);
-		producto.subscribe(o -> System.out.println("Cliente[" + o.toString()));
-		return producto;
+		return productoService.saldoYanki(numeroCelular)
+	            .doOnNext(o -> log.info("Cliente[" + o.toString()));				
 	}
 	
 	@PutMapping("/retiroyk/{numeroCelular}/{monto}")
 	public Mono<ProductBank> retiroCuentaYanki(@PathVariable String numeroCelular,@PathVariable Double monto) {
-		System.out.println("LLEGO DESDE MS-OP-BANCOS --->>>");
+		log.info("Desde ms-op-bancos");		
 		return productoService.retiroYanki(monto, numeroCelular);
 	}
 	
 	@PutMapping("/depositoyk/{numeroCelular}/{monto}")
 	public Mono<ProductBank> despositoCuentaYanki(@PathVariable Double monto, @PathVariable String numeroCelular) {		
-		System.out.println("LLEGO DESDE MS-OP-BANCOS --->>>");
+		log.info("Desde ms-op-bancos");
 		return productoService.depositoYanki(monto, numeroCelular);
 	}
 	

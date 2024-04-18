@@ -20,12 +20,11 @@ import spring.boot.webflu.ms.cuenta.banco.app.dao.TypeProductBankDao;
 import spring.boot.webflu.ms.cuenta.banco.app.documents.ProductBank;
 import spring.boot.webflu.ms.cuenta.banco.app.documents.TypeProductBank;
 import spring.boot.webflu.ms.cuenta.banco.app.dto.Client;
-import spring.boot.webflu.ms.cuenta.banco.app.dto.CuentaBancoDto;
 import spring.boot.webflu.ms.cuenta.banco.app.dto.CuentaCreditoDto;
 import spring.boot.webflu.ms.cuenta.banco.app.dto.CuentaSaldoPromedio;
 import spring.boot.webflu.ms.cuenta.banco.app.dto.TipoCuentaBancoDto;
-import spring.boot.webflu.ms.cuenta.banco.app.service.ProductBankService;
 import spring.boot.webflu.ms.cuenta.banco.app.exception.RequestException;
+import spring.boot.webflu.ms.cuenta.banco.app.service.ProductBankService;
 
 @Service
 public class ProductBankServiceImpl implements ProductBankService {
@@ -74,12 +73,9 @@ public class ProductBankServiceImpl implements ProductBankService {
 		// PARA OBTERNER TODOS LOS DATOS PARA QUITAR EL MONTO
 		log.info("Llego desde el controlador");
 		return productoDao.viewNumCuenta(numero_cuenta, codigo_bancario).flatMap(c -> {
-
-			System.out.println(c.toString());
-
+			log.info("PRODUCTO:" + c);
 			if (monto < c.getSaldo()) {
 				c.setSaldo((c.getSaldo() - monto) - comision);
-
 				return productoDao.save(c);
 			}
 			return Mono.error(new InterruptedException("SALDO INSUFICIENTE"));
@@ -90,10 +86,7 @@ public class ProductBankServiceImpl implements ProductBankService {
 	public Mono<ProductBank> depositos(Double monto, String numero_Cuenta, Double comision, String codigo_bancario) {
 
 		return productoDao.viewNumCuenta(numero_Cuenta, codigo_bancario).flatMap(c -> {
-
-			System.out.println("El monto es : " + monto);
-			System.out.println("El monto es : " + comision);
-
+			log.info("PRODUCTO:" + c);
 			c.setSaldo((c.getSaldo() + monto) - comision);
 			return productoDao.save(c);
 		});
@@ -103,240 +96,111 @@ public class ProductBankServiceImpl implements ProductBankService {
 	@Override
 	public Flux<ProductBank> saveProductoBancoCliente(ProductBank producto) {
 
-		log.info("CREAR PRODUCTO BANCARIO");
-		log.info("Producto[" + producto + "]");
+		log.info("CREAR PRODUCTO BANCARIO - " + producto);	    
 
-		List<ProductBank> listProducto = new ArrayList<ProductBank>();
-		listProducto.add(producto);
+	    return Mono.just(producto)
+	            .flatMapMany(p -> {
+	                // Verificar que el tipo de producto de la cuenta se está mandando a crear
+	                String tipoProductoId = p.getTipoProducto().getId();
+	                boolean tipoValido = tipoProductoId.equals("1") || tipoProductoId.equals("2") ||
+	                        tipoProductoId.equals("3") || tipoProductoId.equals("4") ||
+	                        tipoProductoId.equals("5");
 
-		Flux<ProductBank> fMono = Flux.fromIterable(listProducto);
+	                if (!tipoValido) {
+	                    return Flux.error(new RequestException("TIPO DE PRODUCTO NO VÁLIDO"));
+	                }
 
-		/*
-		 * TIPO PRODUCTO Cuentas Ahorro = 1 Cuentas corrientes = 2 Cuentas a plazo fijo
-		 * = 3
-		 */
-		return fMono.filter(ff -> {
-			// VERIFICAR QUE TIPO PRODUCTO CUENTA SE ESTA MANDO A CREAR
-			if (ff.getTipoProducto().getId().equalsIgnoreCase("1") || ff.getTipoProducto().getId().equalsIgnoreCase("2")
-					|| ff.getTipoProducto().getId().equalsIgnoreCase("3")
-					|| ff.getTipoProducto().getId().equalsIgnoreCase("4")
-					|| ff.getTipoProducto().getId().equalsIgnoreCase("5")) {
-				return true;
-			}
-			return false;
-		}).flatMap(f -> {
-			// BUSCA SI TINE UNA DEUDA DE UN PRODUCTO DE CREDITO
-			log.info("BUSCA SI TINE UNA DEUDA DE UN PRODUCTO DE CREDITO");
-			Flux<CuentaCreditoDto> cred = creditoClient.findByNumDoc(f.getDni());
+	                // Buscar si tiene una deuda de un producto de crédito
+	                log.info("BUSCA SI TINE UNA DEUDA DE UN PRODUCTO DE CRÉDITO");
+	                return creditoClient.findByNumDoc(p.getDni())
+	                        .defaultIfEmpty(new CuentaCreditoDto())
+	                        .flatMap(credito -> {
+	                            if (credito.getNumeroCuenta() == null) {
+	                                log.info("NO TIENE DEUDA");
+	                                credito.setCodigoBanco(p.getCodigoBanco());
+	                                credito.setConsumo(0.0);
+	                            }
 
-			cred.subscribe(m -> log.info("CuentaCreditoDtoXXXX[" + m.getNumeroCuenta() + "]"));
+	                            if (credito.getConsumo() > 0) {
+	                                return Mono.error(new RequestException("TIENE UNA DEUDA - NO PUEDES ADQUIRIR UN PRODUCTO"));
+	                            }
 
-			return cred.defaultIfEmpty(new CuentaCreditoDto()).flatMap(n -> {
+	                            // Buscar el número de documento
+	                            log.info("ProductBank[" + p + "]");
+	                            return clientClient.findByNumDoc(p.getDni())
+	                                    .flatMap(cliente -> {
+	                                        log.info("client[" + cliente + "]");
+	                                        // Comparar el código de banco del cliente con el código que se está mandando del banco
+	                                        if (!cliente.getCodigoBanco().equalsIgnoreCase(p.getCodigoBanco())) {
+	                                            log.info("LA CUENTA-PRODUCTO DEL CLIENTE NO PERTENECE AL BANCO");
+	                                            return Mono.error(new RequestException("LA CUENTA-PRODUCTO DEL CLIENTE NO PERTENECE AL BANCO"));
+	                                        }
 
-				// SI NO TIENE UNA CUENTA SIGNIFICA QUE NO TIENE DEUDA
-				log.info("NUMERO CUENTA : " + n.getNumeroCuenta());
-				log.info("credito : " + n.toString());
-				if (n.getNumeroCuenta() == null) {
-					CuentaCreditoDto cdrt = new CuentaCreditoDto();
-					System.out.println("credito null");
-					cdrt.setCodigoBanco(f.getCodigoBanco());
-					cdrt.setConsumo(0.0);
+	                                        // Verificar el tipo de cliente
+	                                        log.info("VERIFIANDO EL TIPO DE CLIENTE");
+	                                        String tipoClienteId = cliente.getTipoCliente().getId();
 
-					System.out.println(cdrt.toString());
-					// throw new RequestException("NO EXISTE CUENTA - NO TIENE CUENTA CREDITO");
-				}
-				// System.out.println(cred.toString());
-				cred.subscribe(c -> log.info("CuentaCreditoDto[" + c + "]"));
-				return cred.defaultIfEmpty(new CuentaCreditoDto()).flatMap(deuda -> {
-					if (deuda.getCodigoBanco() == null) {
-						log.info("NO TIENE DEUDA");
-						deuda.setCodigoBanco(f.getCodigoBanco());
-						deuda.setConsumo(0.0);
-					}
+	                                        if (tipoClienteId.equalsIgnoreCase("1")) { // Cliente personal
+	                                            return productoDao.buscarPorDocTipoCuentaBanco(p.getDni(), p.getCodigoBanco())
+	                                                    .count()
+	                                                    .flatMap(count -> {
+	                                                        if (count >= 1) {
+	                                                            return Mono.error(new RequestException("CLIENTE PERSONAL YA TIENE UNA CUENTA CREADA"));
+	                                                        } else {
+	                                                            log.info("CLIENTE PERSONAL: CUENTA NUEVA CREADA");
+	                                                            return productoDao.save(crearProducto(p));
+	                                                        }
+	                                                    });
+	                                        } else if (tipoClienteId.equalsIgnoreCase("2")) { // Cliente empresarial
+	                                            if (!tipoProductoId.equalsIgnoreCase("2")) { // Cuenta corriente
+	                                                return Mono.error(new RequestException("CLIENTE EMPRESARIAL: NO PUEDE TENER CUENTA DE ESTE TIPO"));
+	                                            }
+	                                            log.info("CREA LA CUENTA EMPRESARIAL");
+	                                            return productoDao.save(crearProducto(p));
+	                                        } else if (tipoClienteId.equalsIgnoreCase("3")) { // Cliente personal VIP
+	                                            if (p.getSaldo() < 500) {
+	                                                return Mono.error(new RequestException("DEBE TENER SALDO MÍNIMO S/.500.00"));
+	                                            } else if (!cliente.isCredito()) {
+	                                                return Mono.error(new RequestException("CLIENTE PERSONAL VIP: NO TIENE TARJETA DE CRÉDITO"));
+	                                            }
+	                                            log.info("CREA LA CUENTA PERSONAL VIP");
+	                                            return productoDao.save(crearProducto(p));
+	                                        } else if (tipoClienteId.equalsIgnoreCase("4")) { // Cliente empresarial PYME
+	                                            return productoDao.cuentasCorrientes(cliente.getNumdoc())
+	                                                    .flatMap(cuentas -> {
+	                                                        if (cuentas < 0) {
+	                                                            return Mono.error(new RequestException("CLIENTE EMPRESARIAL PYME: NO TIENE CUENTA CORRIENTE"));
+	                                                        } else if (!cliente.isCredito()) {
+	                                                            return Mono.error(new RequestException("CLIENTE EMPRESARIAL PYME: NO TIENE TARJETA DE CRÉDITO"));
+	                                                        }
+	                                                        log.info("CREANDO CUENTA PYME EMPRESARIAL");
+	                                                        return productoDao.save(crearProducto(p));
+	                                                    });
+	                                        } else {
+	                                            return Mono.empty();
+	                                        }
+	                                    });
+	                        });
+	            });
+		
+	}
+	
+	private ProductBank crearProducto(ProductBank p) {
+	    ProductBank producto = new ProductBank();
+	    producto.setDni(p.getDni());
+	    producto.setNumeroCuenta(Constantes.NUMERO_CUENTA+UtilisCode.numCuenta());
+	    producto.setNumeroTarjeta(Constantes.NUMERO_TARJETA + UtilisCode.numTarjeta());
+	    producto.setFecha_afiliacion(p.getFecha_afiliacion());
+	    producto.setFecha_caducidad(p.getFecha_caducidad());
+	    producto.setSaldo(0.0);
+	    producto.setCodigoBanco(p.getCodigoBanco());
 
-					if (deuda.getConsumo() > 0) {
-						throw new RequestException("TIENES UNA DEUDA - NO PUEDES ADQUIRIR UN PRODUCTO");
-					}
+	    TypeProductBank tipoProducto = new TypeProductBank();
+	    tipoProducto.setId(p.getTipoProducto().getId());
+	    tipoProducto.setDescripcion(p.getTipoProducto().getDescripcion());
+	    producto.setTipoProducto(tipoProducto);
 
-					// BUSCAR EL NUMERO DE DOCUMENTO
-					log.info("ProductBank[" + f + "]");
-					// OBTENIENDO LOS DATOS DEL CLIENTE
-					Mono<Client> cli = clientClient.findByNumDoc(f.getDni());
-					cli.subscribe(c -> log.info("CuentaCreditoDto[" + c + "]"));
-
-					return cli.flatMap(p -> {
-						log.info("client[" + f + "]");
-						// COMPARA EL CODIGO DE BANCO DEL CLIENTE CON
-						// EL CODIGO DE QUE ESTA MANDANDO DEL BANCO
-						if (!p.getCodigoBanco().equalsIgnoreCase(f.getCodigoBanco())) {
-							log.info("LA CUENTA-PRODUCTO DEL CLIENTE NO PERTENECE AL BANCO");
-							throw new RequestException("LA CUENTA-PRODUCTO DEL CLIENTE NO PERTENECE AL BANCO");
-
-						} else {
-							/*
-							 * tipo cliente personal = 1 empresarial= 2
-							 */
-							// VERIFIANDO EL TIPO DE CLIENTE
-							log.info("LA CUENTA-PRODUCTO DEL CLIENTE --> PERTENECE AL BANCO");
-							log.info("VERIFIANDO EL TIPO DE CLIENTE");
-							if (p.getTipoCliente().getId().equalsIgnoreCase("1")) { // cliente personal = 1
-								// BUSCA SI EL CLIENTE PERSONAL TIENE UN PRODUCTO YA CREADO
-								log.info(
-										"CLIENTE PERSONAL : VALIDAR SI YA TIENE UNA CUENTA(AHORRO, CORRIENTE, PLAZO FIJO) CREADA - NO PUEDE SER CREADA OTRA");
-								/*
-								 * Un cliente personal solo puede tener un máximo de una cuenta de ahorro, una
-								 * cuenta corriente o cuentas a plazo fijo.
-								 */
-								Mono<Long> valor = productoDao
-										.buscarPorDocTipoCuentaBanco(f.getDni(), f.getCodigoBanco()).count();
-
-								valor.subscribe(v -> log.info("PRODUCTO :[" + v + "]"));
-
-								return valor.flatMap(p1 -> {
-									if (p1 >= 1) {
-
-										log.info(
-												"CLIENTE PERSONAL : TIENE AL MENOS UNA CUENTA CREADA - SOLO PUEDE TENER UN PRODUCTO - NO PUEDE TENER MAS DE UNA CUENTA");
-										throw new RequestException(
-												"CLIENTE PERSONAL : YA TIENE UNA CUENTA(AHORRO, CORRIENTE, PLAZO FIJO) CREADA - NO PUEDE SER CREADA OTRA");
-
-									} else {
-										log.info("CLIENTE PERSONAL : CUENTA NUEVA CREADA");
-										ProductBank f1 = new ProductBank();
-
-										f1.setDni(f.getDni());
-										f1.setNumeroCuenta(f.getNumeroCuenta());
-										f1.setNumeroTarjeta(Constantes.NUMERO_TARJETA + UtilisCode.numTarjeta());
-										f1.setFecha_afiliacion(f.getFecha_afiliacion());
-										f1.setFecha_caducidad(f.getFecha_caducidad());
-										f1.setSaldo(f.getSaldo());
-										f1.setCodigoBanco(f.getCodigoBanco());
-
-										TypeProductBank t = new TypeProductBank();
-										t.setId(f.getTipoProducto().getId());
-										t.setDescripcion(f.getTipoProducto().getDescripcion());
-
-										f1.setTipoProducto(t);
-
-										return productoDao.save(f1);
-									}
-									// return null;
-								});
-
-							} else if (p.getTipoCliente().getId().equalsIgnoreCase("2")) { // empresarial= 2
-								/*
-								 * Un cliente empresarial no puede tener una cuenta de ahorro o de plazo fijo,
-								 * pero sí múltiples cuentas corrientes
-								 */
-								log.info("CLIENTE EMPRESARIA SOLO PUEDE TENER CUENTAS DE TIPO CORRIENTE");
-								if (!f.getTipoProducto().getId().equalsIgnoreCase("2")) {// corriente
-									throw new RequestException(
-											"CLIENTE EMPRESARIAL : NO PUEDE TENER CUENTA DE ESTE TIPO");
-								}
-//								
-								log.info("CREA LA CUENTA EMPRESARIAL");
-								ProductBank f1 = new ProductBank();
-
-								f1.setDni(f.getDni());
-								f1.setNumeroCuenta(f.getNumeroCuenta());
-								f1.setNumeroTarjeta(Constantes.NUMERO_TARJETA + UtilisCode.numTarjeta());
-								f1.setFecha_afiliacion(f.getFecha_afiliacion());
-								f1.setFecha_caducidad(f.getFecha_caducidad());
-								f1.setSaldo(f.getSaldo());
-								f1.setCodigoBanco(f.getCodigoBanco());
-
-								TypeProductBank t = new TypeProductBank();
-								t.setId(f.getTipoProducto().getId());
-								t.setDescripcion(f.getTipoProducto().getDescripcion());
-								f1.setTipoProducto(t);
-
-								return productoDao.save(f1);
-
-							} else if (p.getTipoCliente().getId().equalsIgnoreCase("3")) { // personal vip = 3
-
-								if (!(f.getSaldo() >= 500)) {
-									throw new RequestException("DEBE TENER SALDO MINIMO S/.500.00");
-								} else {
-
-									if (p.isCredito() == false) {
-										throw new RequestException("CLIENTE EMPRESARIAL : NO TIENE TARJETA DE CREDITO");
-									}
-
-									// TODO : Adicionalmente, para solicitar este producto el cliente debe tener una
-									// tarjeta de crédito
-									// con el banco al momento de la creación de la cuenta.
-									System.out.println("CREA LA CUENTA PERSONAL VIP");
-									log.info("CREA LA CUENTA PERSONAL VIP");
-									ProductBank f1 = new ProductBank();
-									f1.setDni(f.getDni());
-									f1.setNumeroCuenta(f.getNumeroCuenta());
-									f1.setNumeroTarjeta(Constantes.NUMERO_TARJETA + UtilisCode.numTarjeta());
-									f1.setFecha_afiliacion(f.getFecha_afiliacion());
-									f1.setFecha_caducidad(f.getFecha_caducidad());
-									f1.setSaldo(f.getSaldo());
-									f1.setCodigoBanco(f.getCodigoBanco());
-
-									TypeProductBank t = new TypeProductBank();
-									t.setId(f.getTipoProducto().getId());
-									t.setDescripcion(f.getTipoProducto().getDescripcion());
-									f1.setTipoProducto(t);
-									return productoDao.save(f1);
-
-								}
-							} else if (p.getTipoCliente().getId().equalsIgnoreCase("4")) { // empresarial pyme = 4
-
-								// TODO : Como requisito debe de tener una cuenta corriente.
-								// TODO : Como requisito, el cliente debe tener una tarjeta de crédito con el
-								// banco al momento de la creación de la cuenta.
-
-								Mono<Long> cuentasCorrientes = productoDao.cuentasCorrientes(p.getNumdoc());
-
-								return cuentasCorrientes.flatMap(p1 -> {
-									if (p1 < 0) {
-										throw new RequestException("CLIENTE EMPRESARIAL : NO TIENE CUENTA CORRIENTE");
-									} else if (p.isCredito() == false) {
-										throw new RequestException("CLIENTE EMPRESARIAL : NO TIENE TARJETA DE CREDITO");
-									} else {
-										// tiene cuenta corriente, puedes crear una cuenta pyme
-										System.out.println("CREANDO CUENTA PYME EMPRESARIAL");
-										log.info("CREANDO CUENTA PYME EMPRESARIAL");
-										ProductBank f1 = new ProductBank();
-										f1.setDni(f.getDni());
-										f1.setNumeroCuenta(f.getNumeroCuenta());
-										f1.setNumeroTarjeta(Constantes.NUMERO_TARJETA + UtilisCode.numTarjeta());
-										f1.setFecha_afiliacion(f.getFecha_afiliacion());
-										f1.setFecha_caducidad(f.getFecha_caducidad());
-										f1.setSaldo(f.getSaldo());
-										f1.setCodigoBanco(f.getCodigoBanco());
-
-										TypeProductBank t = new TypeProductBank();
-										t.setId(f.getTipoProducto().getId());
-										t.setDescripcion(f.getTipoProducto().getDescripcion());
-										f1.setTipoProducto(t);
-										return productoDao.save(f1);
-
-									}
-
-								});
-
-							}
-						}
-						System.out.println("FINAL");
-						return Mono.empty();
-						// return null;
-					});
-
-					// return null;
-				});
-
-				// return null;
-			});
-
-			// return fMono;
-
-		});
-
-//		return null;
+	    return producto;
 	}
 
 	@Override
@@ -354,78 +218,72 @@ public class ProductBankServiceImpl implements ProductBankService {
 		return productoDao.findByDni(dniCliente);
 	}
 
-	double saldoPromedio = 0.0;
-	double sumaPromedio = 0.0;
-	int cantidad = 0;
 
 	@Override
 	public Mono<CuentaSaldoPromedio> saldos(String dniCliente) {
-
-		System.out.println("num_doc-->" + dniCliente);
-		Flux<ProductBank> producto = buscarPorDni(dniCliente);
-
+		
+		log.info("NUM-DOC=" + dniCliente);
 		// Usamos el collect, para acumular los resultados en un solo objeto
 		// CuentaSaldoPromedio
-		return producto.collect(CuentaSaldoPromedio::new, (saldos, pd) -> {
+		return buscarPorDni(dniCliente)
+	            .collect(CuentaSaldoPromedio::new, (saldos, pd) -> {
+	                double sumaPromedio = saldos.getSaldoPromedio() * saldos.getCantidad() + pd.getSaldo();
+	                double nuevaCantidad = saldos.getCantidad() + 1;
+	                double nuevoSaldoPromedio = sumaPromedio / nuevaCantidad;
 
-			// Cálculo del saldo promedio
-			sumaPromedio += pd.getSaldo();
-			cantidad++;
-			saldoPromedio = sumaPromedio / cantidad;
-			System.out.println("saldoPromedio[" + saldoPromedio);
-			// Configuración de los valores en el objeto CuentaSaldoPromedio
-			saldos.setDni(dniCliente);
-			saldos.setNumero_cuenta(pd.getNumeroCuenta());
-			TipoCuentaBancoDto tp = new TipoCuentaBancoDto();
-			tp.setId(pd.getTipoProducto().getId());
-			tp.setDescripcion(pd.getTipoProducto().getDescripcion());
-			saldos.setTipoProducto(tp);
-			saldos.setSaldoPromedio(saldoPromedio);
-			saldos.setFechaSaldo(LocalDate.now());
-
-		});
+	                saldos.setDni(dniCliente);
+	                saldos.setNumero_cuenta(pd.getNumeroCuenta());
+	                TipoCuentaBancoDto tp = new TipoCuentaBancoDto();
+	                tp.setId(pd.getTipoProducto().getId());
+	                tp.setDescripcion(pd.getTipoProducto().getDescripcion());
+	                saldos.setTipoProducto(tp);
+	                saldos.setSaldoPromedio(nuevoSaldoPromedio);
+	                saldos.setCantidad(nuevaCantidad);
+	                saldos.setFechaSaldo(LocalDate.now());
+	            });
+		
 	}
 
 	//=========================================
 	
 	@Override
-	public Mono<ProductBank> viewCuentaYanki(String numeroCelular) {
-		System.out.println("lista productos por numero de cuenta");
+	public Mono<ProductBank> viewCuentaYanki(String numeroCelular) {		
+		log.info("lista productos por numero de cuenta");
 		return productoDao.viewCuenta(numeroCelular);
 	}
 	
 	@Override
 	public Mono<ProductBank> saldoYanki(String numeroCelular) {
-		System.out.println("lista productos por numero de cuenta");
+		log.info("lista productos por numero de cuenta");
 		return productoDao.viewCuenta(numeroCelular);
 	}
 	
 	@Override
 	public Mono<ProductBank> retiroYanki(Double monto, String numeroCelular) {
+		
 		// BUSCA EL NUMERO DE LA CUENTA-TARJETA CON SU BANCO CORRESPONDIENTE
 		// PARA OBTERNER TODOS LOS DATOS PARA QUITAR EL MONTO
 		log.info("Llego desde el controlador");
-		return productoDao.viewCuenta(numeroCelular).flatMap(c -> {
-
-			System.out.println(c.toString());
-
-			if (monto < c.getSaldo()) {
-				c.setSaldo((c.getSaldo() - monto));
-				return productoDao.save(c);
-			}
-			
-			return Mono.error(new InterruptedException("SALDO INSUFICIENTE"));
-		});
+		return productoDao.viewCuenta(numeroCelular)
+	        .flatMap(cuenta -> {	            
+	            log.info("Cuenta : " + cuenta);
+	            if (monto < cuenta.getSaldo()) {
+	                cuenta.setSaldo(cuenta.getSaldo() - monto);
+	                return productoDao.save(cuenta);
+	            } else {
+	                return Mono.error(new InterruptedException("SALDO INSUFICIENTE"));
+	            }
+	        });
 	}
 
 	@Override
 	public Mono<ProductBank> depositoYanki(Double monto, String numeroCelular) {
-		return productoDao.viewCuenta(numeroCelular).flatMap(c -> {
-
-			System.out.println("El monto es : " + monto);			
-			c.setSaldo((c.getSaldo() + monto));
-			return productoDao.save(c);
-		});
+		return productoDao.viewCuenta(numeroCelular)
+	        .flatMap(cuenta -> {	            
+	            log.info("El monto es : " + monto);
+	            cuenta.setSaldo(cuenta.getSaldo() + monto);
+	            return productoDao.save(cuenta);
+	        });
 	}
 
 }
