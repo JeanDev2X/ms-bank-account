@@ -349,7 +349,8 @@ public class ProductBankServiceImpl implements ProductBankService {
 	public Flux<ProductBank> findAllProductoByDniCliente(String dniCliente) {
 		return productoDao.findByDni(dniCliente);
 	}
-
+	
+	
 	public Flux<ProductBank> buscarPorDni(String dniCliente) {
 		return productoDao.findByDni(dniCliente);
 	}

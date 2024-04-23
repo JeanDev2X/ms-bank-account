@@ -19,8 +19,7 @@ import lombok.ToString;
 @Document(collection ="ProductBank")
 public class ProductBank {
 	
-	@Id
-	@NotEmpty
+	@Id	
 	private String id;
 	
 	@NotEmpty
@@ -38,11 +37,11 @@ public class ProductBank {
 	@NotEmpty	
 	private TypeProductBank tipoProducto;
 	
-	@NotEmpty
+//	@NotEmpty
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private String fecha_afiliacion;
 	
-	@NotEmpty
+//	@NotEmpty
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private String fecha_caducidad;
 	@NotEmpty
