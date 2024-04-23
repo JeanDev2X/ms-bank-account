@@ -14,6 +14,7 @@ public class CuentaSaldoPromedio {
 	private String dni;
 	private String numero_cuenta;
 	private TipoCuentaBancoDto tipoProducto;
+	private double cantidad;
 	private double saldoPromedio;
 	private LocalDate fechaSaldo;
 
