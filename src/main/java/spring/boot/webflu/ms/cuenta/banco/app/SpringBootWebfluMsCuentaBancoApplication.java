@@ -52,7 +52,7 @@ public class SpringBootWebfluMsCuentaBancoApplication implements CommandLineRunn
 		}).thenMany(					
 				Flux.just(
 						
-						new ProductBank("47305710","900001","963791402","4557880460332750",ahorro,10000.0,"bcp"),
+//						new ProductBank("47305710","900001","963791402","4557880460332750",ahorro,10000.0,"bcp"),
 						new ProductBank("47305711","900003","","4557880460330001",corriente,30000.0,"bcp"),
 						new ProductBank("47305711","900044","","4557880460330044",corriente,80000.0,"bcp"),
 						new ProductBank("47305712","900005","963791420","4557880460338888",plazoFijo,50000.0,"bcp"),
